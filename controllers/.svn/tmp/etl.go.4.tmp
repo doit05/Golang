@@ -1,0 +1,146 @@
+package controllers
+
+import (
+	"encoding/json"
+	// "fmt"
+	"gate.guanzhang.me/helper/apicode"
+	"gate.guanzhang.me/models"
+	"gate.guanzhang.me/utils"
+	"gate.guanzhang.me/validate"
+)
+
+type EtlController struct {
+	BaseController
+}
+
+// 初始化
+func (this *EtlController) Prepare() {
+
+	if this.CheckSign() == false { // 校验api_sign
+		this.RenderApiJson(apicode.SignError, apicode.Msg(apicode.SignError), "")
+		return
+	}
+}
+
+// 上传数据
+func (this *EtlController) Upload() {
+	params := validate.EtlUploadParams{}
+
+	// 绑定参数
+	if err := this.ParseForm(&params); err != nil {
+		utils.Log.Error("绑定Upload参数出错, err: %v", err) // 记录log
+		this.RenderApiJson(apicode.InvalidParam, apicode.Msg(apicode.InvalidParam), "")
+		return
+	}
+
+	// 验证参数
+	Validation := validate.ValidationParams{}
+	if ok, errMsg := Validation.EtlUpload(params); !ok {
+		utils.Log.Error("验证参数失败, errMsg: %s, params: %+v", errMsg, params) // 记录log
+		this.RenderApiJson(apicode.InvalidParam, apicode.Msg(apicode.InvalidParam), "")
+		return
+	}
+
+	/*
+		此段代码暂时不要删除， 有可能会修改 rs_key生成规则
+		md, perr := ParseMetadata(params.Metadata)
+		if perr != nil {
+			utils.Log.Error("解析第一层Metadata数据出错: " + perr.Error()) // 记录log
+			this.RenderApiJson(apicode.InvalidParam, apicode.Msg(apicode.InvalidParam), "")
+			return
+		}
+	*/
+
+	// 设置参数
+	msg := models.Message{}
+	msg.Message = params.Metadata
+	msg.Status = 1 //1 待处理
+	msg.App_id = params.App_id
+	msg.Client_token = params.Client_id
+	msg.Client_time = params.Client_time
+	msg.Rs_key = models.CreateRsKey(msg)
+
+	// 消息模型
+	mm := models.MessageModel{}
+
+	// 插入消息
+	if insertId, err := mm.InsertMessage(msg); err == nil && insertId > 0 { // 插入成功
+		data := map[string]int64{"id": insertId}
+		this.RenderApiJson(apicode.Success, apicode.Msg(apicode.Success), data)
+	} else { // 插入失败
+		jsonStr, _ := json.Marshal(msg)
+		utils.Log.Error("插入消息失败, msg: " + string(jsonStr) + ", err:" + err.Error()) // 记录log
+		this.RenderApiJson(apicode.InsertMsgFailed, apicode.Msg(apicode.InsertMsgFailed), "")
+	}
+
+}
+
+// 上传客户端操作信息
+func (this *EtlController) Operate() {
+	params := validate.EtlOperateParams{}
+
+	// 绑定参数
+	if err := this.ParseForm(&params); err != nil {
+		utils.Log.Error("绑定operate参数出错, err: %v", err) // 记录log
+		this.RenderApiJson(apicode.InvalidParam, apicode.Msg(apicode.InvalidParam), "")
+		return
+	}
+
+	// 验证参数
+	Validation := validate.ValidationParams{}
+	if ok, errMsg := Validation.EtlOperate(params); !ok {
+		utils.Log.Error("验证参数失败, errMsg: %s, params: %+v", errMsg, params) // 记录log
+		this.RenderApiJson(apicode.InvalidParam, apicode.Msg(apicode.InvalidParam), "")
+		return
+	}
+
+	// 解析Metadata数据
+	operateMetadata, err := validate.ParseOperateMetadata(params.Metadata)
+	if err != nil { // 解析metadata数据失败
+		utils.Log.Error("解析Metadata数据失败, err: %v, metadata: %s", err, params.Metadata) // 记录log
+		this.RenderApiJson(apicode.ParseMetadataFailed, apicode.Msg(apicode.ParseMetadataFailed), "")
+		return
+	}
+
+	om := models.OperateModel{}
+
+	// 插入操作记录
+	if insertId, err := om.InsertOperate(params, operateMetadata); err == nil && insertId > 0 { // 插入成功
+		data := map[string]int64{"id": insertId}
+		this.RenderApiJson(apicode.Success, apicode.Msg(apicode.Success), data)
+	} else { // 插入失败
+		utils.Log.Error("插入操作记录失败, err:%v, params: %+v", err, params) // 记录log
+		this.RenderApiJson(apicode.InsertOpraterFailed, apicode.Msg(apicode.InsertOpraterFailed), "")
+	}
+}
+
+// 获取上传时间
+func (this *EtlController) GetTime() {
+	params := validate.EtlGetTimeParams{}
+
+	// 绑定参数
+	if err := this.ParseForm(&params); err != nil {
+		utils.Log.Error("绑定GetTime参数出错, err:" + err.Error()) // 记录log
+		this.RenderApiJson(apicode.InvalidParam, apicode.Msg(apicode.InvalidParam), "")
+		return
+	}
+
+	// 验证参数
+	Validation := validate.ValidationParams{}
+	if ok, errMsg := Validation.EtlGetTime(params); !ok {
+		utils.Log.Error("验证参数失败, err: " + errMsg) // 记录log
+		this.RenderApiJson(apicode.InvalidParam, apicode.Msg(apicode.InvalidParam), "")
+		return
+	}
+
+	styleModle := models.StyleModel{}
+	client_version := "未上传"
+	// 查询数据
+	di_styles, err1 := styleModle.FindStyles(params.App_id, params.Client_token, client_version)
+	if nil == err1 {
+		this.RenderApiJson(apicode.Success, apicode.Msg(apicode.Success), di_styles)
+	} else {
+		utils.Log.Error("查找数据失败, err:%v, params: %+v", err1, params) // 记录log
+		this.RenderApiJson(apicode.InsertStyleFailed, apicode.Msg(apicode.InsertStyleFailed), "")
+	}
+}

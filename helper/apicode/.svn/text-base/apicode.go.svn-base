@@ -1,0 +1,56 @@
+package apicode
+
+const (
+	Success       string = "0000" // 成功
+	SystemError   string = "-1"   // 系统错误
+	MissParam     string = "-2"   // 参数缺失
+	InvalidParam  string = "-3"   // 参数错误
+	ApiNotFound   string = "-4"   // 接口未找到
+	SignError     string = "-5"   // 签名错误
+	RequestExpire string = "-6"   // 请求已失效
+
+	// 错误代码从4位开始
+	MsgInsertFailed    string = "0001" // 插入消息失败
+	MsgProcessing      string = "0002" // 同一消息正在处理中
+	MsgUploaded        string = "0003" // 同一消息已经处理完成
+	OperaterProcessing string = "0004" //同一操作记录正在处理
+	OperaterProcessed  string = "0005" //同一操作记录处理完成
+
+	InsertOpraterFailed string = "0010" // 插入操作记录失败
+	ParseMetadataFailed string = "0011" // 解析Metadata数据失败
+	InsertStyleFailed   string = "0100" // 插入客户端信息(style)失败
+	ReceivedMsg         string = "0101" //消息已经上传
+)
+
+// 获取错误代码对应的提示信息
+func Msg(code string) string {
+	msgMap := map[string]string{
+		Success:       "success",
+		SystemError:   "系统错误",
+		MissParam:     "参数缺失",
+		InvalidParam:  "参数错误",
+		ApiNotFound:   "接口未找到",
+		SignError:     "签名错误",
+		RequestExpire: "请求已失效",
+
+		MsgInsertFailed: "上传消息失败",
+		MsgProcessing:   "同一消息正在处理中",
+		MsgUploaded:     "同一消息已经处理完成",
+		ReceivedMsg:     "消息已经上传",
+
+		InsertOpraterFailed: "上传操作记录失败",
+		ParseMetadataFailed: "解析Metadata数据失败",
+		OperaterProcessed:   "同一操作记录处理完成",
+		OperaterProcessing:  "同一操作记录正在处理",
+
+		InsertStyleFailed: "插入客户端信息(style)失败",
+	}
+
+	msg, exist := msgMap[code]
+
+	if exist == false { // 不存在默认返回空字符串
+		msg = ""
+	}
+
+	return msg
+}

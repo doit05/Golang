@@ -1,0 +1,109 @@
+package controllers
+
+import (
+<<<<<<< .mine
+	"gate.guanzhang.me/models"
+	"fmt"
+=======
+	"encoding/json"
+	//"fmt"
+>>>>>>> .r22
+	// "gate.guanzhang.me/helper/apicode"
+	"gate.guanzhang.me/models"
+	"gate.guanzhang.me/utils"
+)
+
+type EtlController struct {
+	BaseController
+}
+
+// 初始化
+func (this *EtlController) Prepare() {
+
+<<<<<<< .mine
+	// 校验api_sign
+	// if this.CheckSign() == false {
+	// 	this.RenderApiJson(apicode.SignError, apicode.Msg(apicode.SignError), "")
+	// 	return
+	// }
+=======
+	if this.CheckSign() == false { // 校验api_sign
+		this.RenderApiJson(apicode.SignError, apicode.Msg(apicode.SignError), "")
+		return
+	}
+>>>>>>> .r22
+}
+
+// 上传数据
+func (this *EtlController) Upload() {
+<<<<<<< .mine
+	app_id := "833b1a72b80181ab"
+	var smos models.Smos
+	app_key, err:= smos.GetAppkey(app_id)
+	fmt.Println("app_key : ", app_key, "\nerr : ", err)
+	this.Data["json"] = app_key
+	this.ServeJSON()
+=======
+	params := EtlUploadParams{}
+
+	// 绑定参数
+	if err := this.ParseForm(&params); err != nil {
+		utils.Log.Error("绑定Upload参数出错, err:" + err.Error()) // 记录log
+		this.RenderApiJson(apicode.InvalidParam, apicode.Msg(apicode.InvalidParam), "")
+		return
+	}
+
+	// 验证参数
+	Validation := ValidationParams{}
+	if ok, errMsg := Validation.EtlUpload(params); !ok {
+		utils.Log.Error("验证参数失败, err: " + errMsg) // 记录log
+		this.RenderApiJson(apicode.InvalidParam, apicode.Msg(apicode.InvalidParam), "")
+		return
+	}
+
+	/*
+		此段代码暂时不要删除， 有可能会修改 rs_key生成规则
+		md, perr := ParseMetadata(params.Metadata)
+		if perr != nil {
+			utils.Log.Error("解析第一层Metadata数据出错: " + perr.Error()) // 记录log
+			this.RenderApiJson(apicode.InvalidParam, apicode.Msg(apicode.InvalidParam), "")
+			return
+		}
+	*/
+
+	// 设置参数
+	msg := models.Message{}
+	msg.Message = params.Metadata
+	msg.Status = 1
+	msg.App_id = params.App_id
+	msg.Client_token = params.Client_id
+	msg.Client_time = params.Client_time
+	msg.Rs_key = models.CreateRsKey(msg)
+
+	// 消息模型
+	mm := models.MessageModel{}
+
+	// 插入消息
+	if insertId, err := mm.InsertMessage(msg); err == nil && insertId > 0 { // 插入成功
+		data := map[string]int64{"id": insertId}
+		this.RenderApiJson(apicode.Success, apicode.Msg(apicode.Success), data)
+	} else { // 插入失败
+		jsonStr, _ := json.Marshal(msg)
+		utils.Log.Error("插入消息失败, msg: " + string(jsonStr) + ", err:" + err.Error()) // 记录log
+		this.RenderApiJson(apicode.InsertMsgFailed, apicode.Msg(apicode.InsertMsgFailed), "")
+	}
+
+>>>>>>> .r22
+}
+
+// 上传客户端操作信息
+func (this *EtlController) Operate() {
+	this.Data["json"] = "operate api"
+	this.ServeJSON()
+}
+
+// 获取上传时间
+func (this *EtlController) GetTime() {
+	this.Data["json"] = "get_time api"
+	this.ServeJSON()
+}

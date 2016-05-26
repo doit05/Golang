@@ -6,11 +6,6 @@ copyrequestbody = true
 httpport = 9020
 
 
-# 开启后台功能
-EnableAdmin = true
-# 后台端口
-AdminPort = 9021
-
 #---------------------开发或测试环境------------
 [dev]
 # 日志文件目录
